@@ -3,11 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Shooting : MonoBehaviour {
+public class PlayerShoot : MonoBehaviour {
 	
 	[SerializeField] private GameObject playerGun;
 	[SerializeField] private Transform firePoint;
-	
+
+	private Vector3 aimDirection;
 	private float gunAngle;
 
 	public Gem CurrentGem; // to shoot
@@ -22,8 +23,8 @@ public class Shooting : MonoBehaviour {
 	}
 	
 	private void Aim() {
-		Vector3 direction = Input.mousePosition - Camera.main.WorldToScreenPoint(playerGun.transform.position);
-		gunAngle = -Mathf.Atan2(direction.x, direction.y) * Mathf.Rad2Deg;
+		aimDirection = Input.mousePosition - Camera.main.WorldToScreenPoint(playerGun.transform.position);
+		gunAngle = -Mathf.Atan2(aimDirection.x, aimDirection.y) * Mathf.Rad2Deg;
 		
 		if (gunAngle < -90 || gunAngle > 90) return;
 		playerGun.transform.rotation = Quaternion.AngleAxis(gunAngle, Vector3.forward);
@@ -33,11 +34,13 @@ public class Shooting : MonoBehaviour {
 		if(!CurrentGem) return;
 		
 		// Spawn gem will move to direction, then does it's own thing (bounce, attach, etc.)
+		CurrentGem.StartMovement(aimDirection);
 		// Player will get new gem > GM will spawn new random gem
 	}
 
 	public void SetNewGem(Gem newGem) {
 		CurrentGem = newGem;
+		CurrentGem.transform.SetParent(playerGun.transform);
 		CurrentGem.transform.position = firePoint.position;
 	}
 }

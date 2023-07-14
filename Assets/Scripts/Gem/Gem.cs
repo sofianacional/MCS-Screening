@@ -12,17 +12,19 @@ public enum GemType {
 	Green
 }
 public class Gem : MonoBehaviour {
-
-	private GemAttachment gemAttachment;
-	private GemMovement gemMovement;
-
+	
+	[SerializeField] private GemMovement gemMovement;
+	
 	public GemType GemType;
 	
 	private void Awake() {
-		gemAttachment = GetComponent<GemAttachment>();
 		gemMovement = GetComponent<GemMovement>();
 	}
-	
-	
+
+	public void StartMovement(Vector3 movePos) {
+		gemMovement.CanMove = true;
+		gemMovement.MoveDirection = movePos;
+		transform.parent = null;
+	}
 	
 }
