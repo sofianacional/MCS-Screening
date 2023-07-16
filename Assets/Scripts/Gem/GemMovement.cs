@@ -6,23 +6,76 @@ using UnityEngine.Tilemaps;
 
 public class GemMovement : MonoBehaviour {
 
+	private Gem gem;
+	private Vector2 lastVelocity;
+	
+	[SerializeField] private Rigidbody2D rb;
 	[SerializeField] private float speed;
+
+	[SerializeField] private List<Gem> gemsInContact = new();
+	[SerializeField] private bool canDetectCollision = true;
 	
 	public bool CanMove = false;
 	public Vector3 MoveDirection;
 	
-	private void Update() {
-		Move();
+	private void Awake() {
+		gem = GetComponent<Gem>();
+		rb = GetComponent<Rigidbody2D>();
 	}
 
-	private void Move() {
+	private void FixedUpdate() {
+		lastVelocity = rb.velocity;
+	}
+
+	public void Move() {
 		if(!CanMove) return;
-		transform.position = Vector3.MoveTowards(transform.position, MoveDirection, speed * Time.deltaTime);
+		rb.velocity = MoveDirection * speed;
 	}
 
-	private void OnTriggerEnter2D(Collider2D col) {
-		if (col.gameObject.GetComponent<TilemapCollider2D>()) {
+	private void Bounce(Collision2D col) {
+		var newSpeed = lastVelocity.magnitude;
+		
+		Vector2 newVelocity = Vector2.Reflect(lastVelocity.normalized, col.contacts[0].normal);
+		rb.velocity = newVelocity * Mathf.Max(newSpeed, 0);
+	}
+	
+	public void OnCollisionEnter2D(Collision2D col) {
+		if(!canDetectCollision == col.gameObject == gameObject) return;
+		
+		if(col.gameObject.GetComponent<Gem>()){
+			/*Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, 0.1f);
+			foreach (var c in colliders) {
+				if (c.GetComponent<Gem>()) {
+					print(c.gameObject);
+					Gem gemInContact = c.GetComponent<Gem>();
+					DisableMovement();
+					gemsInContact.Add(gemInContact);
+				}
+			}*/
+			//print(col.gameObject);
+			gem.Evt_OnHitOtherGem.Invoke(gem, col.gameObject.GetComponent<Gem>());
+			DisableMovement();
+		}
+		else if (col.gameObject.GetComponent<TilemapCollider2D>()) {
 			// if wall = bounce; if ceiling = attach
-		}	
+			var colObj = col.gameObject;
+			if (colObj.gameObject.layer == 7) // Wall layer
+				Bounce(col);
+			else if (col.gameObject.gameObject.layer == 6) { // Ceiling layer
+				print("hit ceiling");
+				gem.Evt_OnHitCeiling.Invoke(gem);
+				DisableMovement();
+			}
+		}
+		
+		
+	}
+
+	private void DisableMovement() {
+		CanMove = false;
+		canDetectCollision = false;
+		rb.velocity = Vector3.zero;
+		rb.constraints = RigidbodyConstraints2D.FreezeAll;
+		transform.rotation = Quaternion.identity;
 	}
 }
