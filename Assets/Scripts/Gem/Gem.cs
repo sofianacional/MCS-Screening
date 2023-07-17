@@ -19,7 +19,7 @@ public class Gem : MonoBehaviour {
 	
 	
 	public GemType GemType;
-	public List<Quadrant> Quadrants;
+	public List<Side> Sides;
 	public List<Gem> AdjacentGems;
 	
 	public UnityEvent<Gem> Evt_OnHitCeiling = new();
@@ -49,15 +49,26 @@ public class Gem : MonoBehaviour {
 		
 		transform.parent = null;
 	}
-	
-	private List<Gem> GetAdjacentGems() {
-		List<Gem> adjacentGems = new List<Gem>();
-		
-		for (int i = 0; i < Quadrants.Count; i++) {
-			adjacentGems[i] = Quadrants[i].QuadrantGem;
-		}
 
-		return adjacentGems;
+	public void UpdateAdjacentGemsList() {
+		for (int i = 0; i < Sides.Count; i++) {
+			AdjacentGems[i] = Sides[i].AttachedGem;
+		}
 	}
 	
+	/*private List<Gem> GetAdjacentGems() {
+		//List<Gem> adjacentGems = new List<Gem>();
+		
+		for (int i = 0; i < Sides.Count; i++) {
+			AdjacentGems[i] = Sides[i].AttachedGem;
+		}
+
+		return AdjacentGems;
+	}*/
+
+	private void RemoveAdjacentGem(Gem gemToRemove) {
+		foreach (var g in AdjacentGems) {
+			if (g == gemToRemove) AdjacentGems.Remove(gemToRemove);
+		}
+	}
 }

@@ -29,6 +29,7 @@ public class GemMovement : MonoBehaviour {
 
 	public void Move() {
 		if(!CanMove) return;
+		transform.rotation = Quaternion.identity;
 		rb.velocity = MoveDirection * speed;
 	}
 
@@ -43,16 +44,6 @@ public class GemMovement : MonoBehaviour {
 		if(!canDetectCollision == col.gameObject == gameObject) return;
 		
 		if(col.gameObject.GetComponent<Gem>()){
-			/*Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, 0.1f);
-			foreach (var c in colliders) {
-				if (c.GetComponent<Gem>()) {
-					print(c.gameObject);
-					Gem gemInContact = c.GetComponent<Gem>();
-					DisableMovement();
-					gemsInContact.Add(gemInContact);
-				}
-			}*/
-			//print(col.gameObject);
 			gem.Evt_OnHitOtherGem.Invoke(gem, col.gameObject.GetComponent<Gem>());
 			DisableMovement();
 		}
@@ -62,13 +53,11 @@ public class GemMovement : MonoBehaviour {
 			if (colObj.gameObject.layer == 7) // Wall layer
 				Bounce(col);
 			else if (col.gameObject.gameObject.layer == 6) { // Ceiling layer
-				print("hit ceiling");
+				//print("hit ceiling");
 				gem.Evt_OnHitCeiling.Invoke(gem);
 				DisableMovement();
 			}
 		}
-		
-		
 	}
 
 	private void DisableMovement() {
