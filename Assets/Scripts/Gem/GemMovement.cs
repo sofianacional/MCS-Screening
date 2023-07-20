@@ -47,13 +47,15 @@ public class GemMovement : MonoBehaviour {
 			gem.Evt_OnHitOtherGem.Invoke(gem, col.gameObject.GetComponent<Gem>());
 			DisableMovement();
 		}
-		else if (col.gameObject.GetComponent<TilemapCollider2D>()) {
+		
+		if (col.gameObject.GetComponent<TilemapCollider2D>()) {
 			// if wall = bounce; if ceiling = attach
 			var colObj = col.gameObject;
 			if (colObj.gameObject.layer == 7) // Wall layer
 				Bounce(col);
 			else if (col.gameObject.gameObject.layer == 6) { // Ceiling layer
 				//print("hit ceiling");
+				gem.IsOnCeiling = true;
 				gem.Evt_OnHitCeiling.Invoke(gem);
 				DisableMovement();
 			}
@@ -66,5 +68,8 @@ public class GemMovement : MonoBehaviour {
 		rb.velocity = Vector3.zero;
 		rb.constraints = RigidbodyConstraints2D.FreezeAll;
 		transform.rotation = Quaternion.identity;
+		
+		// Check for nearby tilemap cols 
+		gem.CheckSurroundingObjects();
 	}
 }

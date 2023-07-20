@@ -12,8 +12,8 @@ GameObject:
   - component: {fileID: 3558395566315270063}
   - component: {fileID: 6148571668188674079}
   - component: {fileID: 3466314439188784550}
-  m_Layer: 10
-  m_Name: Side
+  m_Layer: 9
+  m_Name: Left
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -124,6 +124,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef51d4c4a7bc27c479ccb3f023e75190, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  canAttach: 1
+  boxCol: {fileID: 0}
   Origin: {fileID: 1489203336462793396}
   AttachedGem: {fileID: 0}
 --- !u!1 &1861949843504688931
@@ -256,7 +258,7 @@ CircleCollider2D:
   m_UsedByComposite: 0
   m_Offset: {x: 0, y: 0}
   serializedVersion: 2
-  m_Radius: 0.075
+  m_Radius: 0.08
 --- !u!114 &1861949843504688936
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -269,8 +271,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 989b5de59c59d5546816fa981a94c948, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  GemID: 0
   gemMovement: {fileID: 1861949843504688934}
-  collider: {fileID: 0}
+  gemCollider: {fileID: 0}
   GemType: 1
   Sides:
   - {fileID: 6490290476464373436}
@@ -286,10 +289,17 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  IsOnCeiling: 0
   Evt_OnHitCeiling:
     m_PersistentCalls:
       m_Calls: []
   Evt_OnHitOtherGem:
+    m_PersistentCalls:
+      m_Calls: []
+  Evt_OnGemDestroyed:
+    m_PersistentCalls:
+      m_Calls: []
+  Evt_OnBecomeFloatingGem:
     m_PersistentCalls:
       m_Calls: []
 --- !u!114 &1861949843504688934
@@ -322,8 +332,8 @@ GameObject:
   - component: {fileID: 7744306099945417931}
   - component: {fileID: 4000110705545149646}
   - component: {fileID: 7202314076008542143}
-  m_Layer: 10
-  m_Name: Side
+  m_Layer: 9
+  m_Name: Right
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -434,6 +444,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef51d4c4a7bc27c479ccb3f023e75190, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  canAttach: 1
+  boxCol: {fileID: 0}
   Origin: {fileID: 1731932223665496754}
   AttachedGem: {fileID: 0}
 --- !u!1 &5469876252647120462
@@ -448,8 +460,8 @@ GameObject:
   - component: {fileID: 6931499074461700552}
   - component: {fileID: 166451218804476607}
   - component: {fileID: 5289308667537305257}
-  m_Layer: 10
-  m_Name: Side
+  m_Layer: 9
+  m_Name: Upper Right
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -560,6 +572,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef51d4c4a7bc27c479ccb3f023e75190, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  canAttach: 1
+  boxCol: {fileID: 0}
   Origin: {fileID: 1751725915562203244}
   AttachedGem: {fileID: 0}
 --- !u!1 &5637274880513634566
@@ -574,8 +588,8 @@ GameObject:
   - component: {fileID: 3689516378451950520}
   - component: {fileID: 4720323730309097626}
   - component: {fileID: 6490290476464373436}
-  m_Layer: 10
-  m_Name: Side
+  m_Layer: 9
+  m_Name: Upper Left
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -686,6 +700,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef51d4c4a7bc27c479ccb3f023e75190, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  canAttach: 1
+  boxCol: {fileID: 0}
   Origin: {fileID: 1631337452715607688}
   AttachedGem: {fileID: 0}
 --- !u!1 &7031001251600727594
@@ -700,8 +716,8 @@ GameObject:
   - component: {fileID: 6207292919326311749}
   - component: {fileID: 2819596887272909672}
   - component: {fileID: 4651030216423863909}
-  m_Layer: 10
-  m_Name: Side
+  m_Layer: 9
+  m_Name: Lower Left
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -812,6 +828,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef51d4c4a7bc27c479ccb3f023e75190, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  canAttach: 1
+  boxCol: {fileID: 0}
   Origin: {fileID: 6904242871367113614}
   AttachedGem: {fileID: 0}
 --- !u!1 &7902620608925947779
@@ -826,8 +844,8 @@ GameObject:
   - component: {fileID: 4979902460031756168}
   - component: {fileID: 7192576004471412595}
   - component: {fileID: 227977891332659077}
-  m_Layer: 10
-  m_Name: Side
+  m_Layer: 9
+  m_Name: Lower Right
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -938,5 +956,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef51d4c4a7bc27c479ccb3f023e75190, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  canAttach: 1
+  boxCol: {fileID: 0}
   Origin: {fileID: 4421665472399494373}
   AttachedGem: {fileID: 0}

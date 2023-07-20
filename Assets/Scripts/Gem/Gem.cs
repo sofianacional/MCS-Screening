@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using Random = UnityEngine.Random;
 
 public enum GemType {
 	Bronze,
@@ -14,29 +15,39 @@ public enum GemType {
 }
 public class Gem : MonoBehaviour {
 
+	public int GemID;
+
 	[SerializeField] private GemMovement gemMovement;
-	[SerializeField] private CircleCollider2D collider;
+	[SerializeField] private CircleCollider2D gemCollider;
 	
 	
 	public GemType GemType;
 	public List<Side> Sides;
 	public List<Gem> AdjacentGems;
 	
+	public bool IsOnCeiling;
+	
 	public UnityEvent<Gem> Evt_OnHitCeiling = new();
 	public UnityEvent<Gem, Gem> Evt_OnHitOtherGem = new();
+
+	public UnityEvent Evt_OnGemDestroyed = new();
+	public UnityEvent<Gem> Evt_OnBecomeFloatingGem = new();
 	
 	private void Awake() {
 		gemMovement = GetComponent<GemMovement>();
-		collider = GetComponent<CircleCollider2D>();
+		gemCollider = GetComponent<CircleCollider2D>();
 	}
-
+	
 	public void Initialize() {
 		// Disables the Gem's physics and other attributes on spawn
-		collider.enabled = false;
+		gemCollider.enabled = false;
+		
+		// generate temp gemID for debugging
+		GemID = Random.Range(1000, 2000);
 	}
 
 	private void EnableComponents() {
-		collider.enabled = true;
+		gemCollider.enabled = true;
 	}
 	
 	public void StartMovement() {
@@ -54,21 +65,12 @@ public class Gem : MonoBehaviour {
 		for (int i = 0; i < Sides.Count; i++) {
 			AdjacentGems[i] = Sides[i].AttachedGem;
 		}
+		CheckSurroundingObjects();
 	}
-	
-	/*private List<Gem> GetAdjacentGems() {
-		//List<Gem> adjacentGems = new List<Gem>();
-		
-		for (int i = 0; i < Sides.Count; i++) {
-			AdjacentGems[i] = Sides[i].AttachedGem;
-		}
 
-		return AdjacentGems;
-	}*/
-
-	private void RemoveAdjacentGem(Gem gemToRemove) {
-		foreach (var g in AdjacentGems) {
-			if (g == gemToRemove) AdjacentGems.Remove(gemToRemove);
+	public void CheckSurroundingObjects() {
+		foreach (var s in Sides) {
+			s.GetNearbyObjects();
 		}
 	}
 }
