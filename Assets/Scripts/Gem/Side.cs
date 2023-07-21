@@ -8,10 +8,9 @@ using UnityEngine.Tilemaps;
 public class Side : MonoBehaviour {
 
     private Gem gem;
-
-    [SerializeField] private bool canAttach = true;
     [SerializeField] private BoxCollider2D boxCol;
     
+    public bool CanAttach = true;
     public Transform Origin;
     public Gem AttachedGem;
 
@@ -21,8 +20,8 @@ public class Side : MonoBehaviour {
     }
 
     public void OnTriggerEnter2D(Collider2D col) {
-        //if(AttachedGem || col.transform.parent == gameObject.transform.parent || !canAttach) return;
-        if(col.transform == gameObject.transform.parent || !canAttach) return;
+        //if(AttachedGem || col.transform.parent == gameObject.transform.parent || !CanAttach) return;
+        if(col.transform == gameObject.transform.parent || !CanAttach) return;
         if (col.GetComponent<Gem>()) {
             AttachedGem = col.GetComponent<Gem>();
             gem.UpdateAdjacentGemsList();
@@ -36,14 +35,14 @@ public class Side : MonoBehaviour {
         if (col.GetComponent<Gem>()) {
             if (AttachedGem == col.GetComponent<Gem>()) {
                 //print("object " + gem.GemID + " " + gameObject.name);
-                print("trigger exit");
+                //print("trigger exit");
                 ClearSideGem();
             }
         }
     }
 
     private void ClearSideGem() {
-        print(gameObject.name + "clear");
+        //print(gameObject.name + "clear");
         if(AttachedGem) AttachedGem.Evt_OnGemDestroyed.RemoveListener(ClearSideGem);
         AttachedGem = null;
         gem.UpdateAdjacentGemsList();
@@ -51,18 +50,16 @@ public class Side : MonoBehaviour {
 
     public void GetNearbyObjects() {
         Vector2 pos = (Vector2)transform.position - boxCol.offset;
-        //print(pos);
         //Collider2D[] listOfColliders = Physics2D.OverlapCircleAll(pos, 0.05f);
-        Collider2D[] listOfColliders = Physics2D.OverlapBoxAll(pos, new Vector2(0.06f, 0.06f),0f);
+        Collider2D[] listOfColliders = Physics2D.OverlapBoxAll(pos, boxCol.size,0f);
         
         foreach (var c in listOfColliders) {
-            if (c.GetComponent<TilemapCollider2D>()) {
+            if (c.GetComponentInParent<TilemapCollider2D>()) {
                 if (c.gameObject.layer == 6) gem.IsOnCeiling = true;
-                print(c);
-                canAttach = false;
+                CanAttach = false;
             }
             
-            /*if(c.transform.parent == gameObject.transform.parent || !canAttach) continue;
+            /*if(c.transform.parent == gameObject.transform.parent || !CanAttach) continue;
             if (c.GetComponentInParent<Gem>()) {
                 if (!AttachedGem) {
                     AttachedGem = c.GetComponentInParent<Gem>();

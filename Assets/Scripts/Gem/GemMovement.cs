@@ -43,11 +43,6 @@ public class GemMovement : MonoBehaviour {
 	public void OnCollisionEnter2D(Collision2D col) {
 		if(!canDetectCollision == col.gameObject == gameObject) return;
 		
-		if(col.gameObject.GetComponent<Gem>()){
-			gem.Evt_OnHitOtherGem.Invoke(gem, col.gameObject.GetComponent<Gem>());
-			DisableMovement();
-		}
-		
 		if (col.gameObject.GetComponent<TilemapCollider2D>()) {
 			// if wall = bounce; if ceiling = attach
 			var colObj = col.gameObject;
@@ -60,9 +55,16 @@ public class GemMovement : MonoBehaviour {
 				DisableMovement();
 			}
 		}
+		
+		if(col.gameObject.GetComponent<Gem>()){
+			gem.Evt_OnHitOtherGem.Invoke(gem, col.gameObject.GetComponent<Gem>());
+			DisableMovement();
+		}
+		
+		
 	}
 
-	private void DisableMovement() {
+	public void DisableMovement() {
 		CanMove = false;
 		canDetectCollision = false;
 		rb.velocity = Vector3.zero;

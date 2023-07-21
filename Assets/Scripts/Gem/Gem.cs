@@ -16,9 +16,10 @@ public enum GemType {
 public class Gem : MonoBehaviour {
 
 	public int GemID;
-
+	
 	[SerializeField] private GemMovement gemMovement;
 	[SerializeField] private CircleCollider2D gemCollider;
+	[SerializeField] private SpriteRenderer spriteRenderer;
 	
 	
 	public GemType GemType;
@@ -36,17 +37,23 @@ public class Gem : MonoBehaviour {
 	private void Awake() {
 		gemMovement = GetComponent<GemMovement>();
 		gemCollider = GetComponent<CircleCollider2D>();
+		spriteRenderer = GetComponent<SpriteRenderer>();
 	}
 	
-	public void Initialize() {
+	public void Initialize(GemData gemData) {
+		// Set Gem Data
+		GemType = gemData.GemType;
+		spriteRenderer.sprite = gemData.GemSprite;
+		
 		// Disables the Gem's physics and other attributes on spawn
 		gemCollider.enabled = false;
 		
 		// generate temp gemID for debugging
 		GemID = Random.Range(1000, 2000);
+		gameObject.name = "Gem " + GemID;
 	}
 
-	private void EnableComponents() {
+	public void EnableComponents() {
 		gemCollider.enabled = true;
 	}
 	
@@ -61,11 +68,15 @@ public class Gem : MonoBehaviour {
 		transform.parent = null;
 	}
 
+	public void DisableMovement(){
+		gemMovement.DisableMovement();
+	}
+
 	public void UpdateAdjacentGemsList() {
+		CheckSurroundingObjects();
 		for (int i = 0; i < Sides.Count; i++) {
 			AdjacentGems[i] = Sides[i].AttachedGem;
 		}
-		CheckSurroundingObjects();
 	}
 
 	public void CheckSurroundingObjects() {

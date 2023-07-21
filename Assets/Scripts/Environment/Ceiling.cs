@@ -9,8 +9,7 @@ public class Ceiling : MonoBehaviour {
 	public Vector3 GetNearestPoint(Vector3 obj) {
 		Vector3 minDistance = Vector3.zero;
 		float currentDistance = Vector3.Distance(attachPoints[0].position, obj);
-		float lowestDistance;
-		lowestDistance = currentDistance;
+		float lowestDistance = currentDistance;
 		
 		foreach (var p in attachPoints) {
 			currentDistance = Vector3.Distance(p.position, obj);
