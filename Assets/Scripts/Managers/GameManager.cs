@@ -196,26 +196,13 @@ public class GameManager : MonoBehaviour {
 	
 	private void FindFloatingGems() {
 		// get every attached gems
-		/*foreach (var adjacentGem in similarGemsAdjacent) {
-			if(IsLocatedInList(adjacentGem, totalAdjacentGems)) continue;
+		foreach (var adjacentGem in similarGemsAdjacent) { // Main checker for each similar gem adjacent
+			List<Gem> tempGemsList = new List<Gem>(); // temp list = list of gems that are adjacent to each other, until on ceiling/nothing 
+			tempGemsList.Add(adjacentGem);
+			print("check new SGA");
 			
-			List<Gem> tempGemsList = new List<Gem>(); // temp list for the adjacent gem's adjacent gems
-			tempGemsList = GetAllAdjacentGems(adjacentGem, tempGemsList);
-
-			tempCount++;
-			print("Cycle " + tempCount);
 			if (IsFloating(tempGemsList)) {
-				// Gems are not attached to anything
-				foreach (var g in tempGemsList) {
-					if (!floatingGems.Contains(g)) floatingGems.Add(g);
-				}
-			}
-		}*/
-		
-		foreach (var adjacentGem in similarGemsAdjacent) {
-			List<Gem> tempGemsList = new List<Gem>();
-			
-			if (IsFloating(adjacentGem, tempGemsList)) {
+				print("is floating");
 				if (tempGemsList.Count <= 0) return;
 				
 				foreach (var g in tempGemsList) {
@@ -226,102 +213,86 @@ public class GameManager : MonoBehaviour {
 		totalAdjacentGems.Clear();
 	}
 
-	private bool IsFloating(List<Gem> listOfGems) {
-		if (listOfGems.Count <= 0) {
-			print("list is empty");
-			return false;
-		}
+	private bool IsFloating(List<Gem> tempList) { // Returns if on ceiling/floating
+		List<Gem> queueList = new List<Gem>(); // adds "unchecked" gems to the queue list first
+		int queueIndex = 0;
 		
-		foreach (var g in listOfGems) {
-			print(g.GemID + " is on ceiling = " + g.IsOnCeiling);
-			if (g.IsOnCeiling) {
-				print("is not floating");
+		Gem gemToCheck = tempList[0];
+		queueList.Add(gemToCheck);
+
+		while(!gemToCheck.IsOnCeiling || !AreAllChecked(gemToCheck, queueList)){ // Loop until gem to check is attached to ceiling / all gems have been checked but none are on ceiling
+			print("Gem to check: " + gemToCheck.GemID);
+			int emptyCounter = 0;
+			var checkedGemCounter = 0;
+			
+			foreach (var adjacentGem in gemToCheck.AdjacentGems) { // run through all current gem adjacent gem
+				if ( adjacentGem && IsLocatedInList(adjacentGem, tempList) && !IsLocatedInList(adjacentGem, queueList)) { // already in temp list, already checked
+					checkedGemCounter++;
+					print("already in list");
+					if (checkedGemCounter >= 6) 
+						return false;
+				}
+				else if (!adjacentGem || IsLocatedInList(adjacentGem, similarGems) || IsLocatedInList(adjacentGem, similarGemsAdjacent) ) { // no adjacent gem OR not in similar gem
+					print("empty");
+					emptyCounter++;
+					if (emptyCounter >= 6) { // floating, no adjacent gem
+						print("floating, return");
+						return true; 
+					}
+				}
+				else if (adjacentGem && !IsLocatedInList(adjacentGem, tempList) && !IsLocatedInList(adjacentGem, queueList)) { // has adjacent, hasn't been checked
+					print( adjacentGem.GemID + " = has adjacent, put gem to queue");
+					queueList.Add(adjacentGem);
+				}
+				
+				if(!tempList.Contains(gemToCheck)) tempList.Add(gemToCheck);
+				if(!totalAdjacentGems.Contains(gemToCheck)) totalAdjacentGems.Add(gemToCheck);
+			}
+
+			if (AreAllChecked(gemToCheck, queueList)) {
+				print("all gems are checked");
 				return false;
 			}
-		}
-		print("is floating");
-		return true;
-	}
-	
-	private List<Gem> GetAllAdjacentGems(Gem gemToCheck, List<Gem> adjacentGemsList) {
-		// get all adjacent until none
-		//List<Gem> tempGemsList = new List<Gem>(); // temp list for the adjacent gem's adjacent gems
-		if(!adjacentGemsList.Contains(gemToCheck)) adjacentGemsList.Add(gemToCheck);
-		if(!totalAdjacentGems.Contains(gemToCheck)) totalAdjacentGems.Add(gemToCheck);
-		
-		foreach (var adjacentGem in gemToCheck.AdjacentGems) {
-			if(!adjacentGem) continue;
-			/*if (IsNotRegistered(adjacentGem, adjacentGemsList)) {
-				//tempGemsList.Add(adjacentGem);
-				adjacentGemsList.Add(adjacentGem);
-				totalAdjacentGems.Add(adjacentGem);
-				GetAllAdjacentGems(adjacentGem, adjacentGemsList);
-			}*/
 			
-			adjacentGemsList.Add(adjacentGem);
-			if(!totalAdjacentGems.Contains(gemToCheck)) totalAdjacentGems.Add(adjacentGem);
+			print(gemToCheck.GemID + " ?? " + queueList[queueIndex].GemID);
 			
-			if (!adjacentGem.IsOnCeiling && !IsLocatedInList(adjacentGem, adjacentGemsList) && !IsLocatedInList(gemToCheck, adjacentGemsList)) {
-				//tempGemsList.Add(adjacentGem);
-				//print("recursion");
-				GetAllAdjacentGems(adjacentGem, adjacentGemsList);
-			}
-		}
-		return adjacentGemsList;
-	}
-
-	private bool IsFloating(Gem initialGem, List<Gem> tempList) { // if connected to anything
-		int count = 0;
-		Gem gemToCheck = initialGem;
-		while(!gemToCheck.IsOnCeiling){
-			foreach (var adjacentGem in gemToCheck.AdjacentGems) {
-				if (!adjacentGem || IsLocatedInList(adjacentGem, similarGems)) { // no adjacent gem + not in similar gem
-					count++;
-				}
-				else if (adjacentGem || adjacentGem.IsOnCeiling) {
-					tempList.Add(gemToCheck); // ADD IT TOO BEFORE CHANGING IN CASE FLOATING ?? IDK HELP
-					gemToCheck = adjacentGem; // change gem to check
+			// change gem to check
+			if (gemToCheck == queueList[queueIndex]) {
+				queueIndex++;
+				print("queue index: " + queueIndex);
+				print("queue list count: " + queueList.Count);
+				if (queueIndex >= queueList.Count) {
+					// no more next element
+					print("no more next element");
 					break;
 				}
+				else {
+					print("next element");
+					gemToCheck = queueList[queueIndex];
+				}
 			}
-			
-			if (count >= 6) { // floating
-				tempList.Add(gemToCheck); // ** INSERT HERE PROPER WAY OF ADDING TO FLOATING GEMS LIST, YES
-				return true; 
-            }
-        }
+			else {
+				print("ure not supposed to enter here but im here to prevent the infinite loop");
+				break;
+			}
+		}
+		print("on ceiling or idk,");
 		return false;
 	}
-	
-	private void CheckForMoreAdjacentGems(Gem gem, List<Gem> tempGemsList) {
-		foreach (var g in gem.AdjacentGems) { // "unregistered" gem
-			if (!g) continue;
-			if (!IsNotRegistered(gem, tempGemsList)) {
-				print("enter");
-				tempGemsList.Add(g);
-				totalAdjacentGems.Add(g);
-				CheckForMoreAdjacentGems(g, tempGemsList);
-			}
-		}
-	}
 
-	private bool IsNotRegistered(Gem gemToCheck, List<Gem> tempGemsList) { // "registered" = within any existing lists
-		return !IsLocatedInList(gemToCheck, similarGems) && !IsLocatedInList(gemToCheck, similarGemsAdjacent)
-             && !IsLocatedInList(gemToCheck, totalAdjacentGems) && !IsLocatedInList(gemToCheck, tempGemsList);
-	}
-	
-	/*private void CheckForMoreAdjacentGems(Gem gem, List<Gem> tempGemsList) {
-		foreach (var g in gem.AdjacentGems) { // "unregistered" gem
-			if (!g) continue;
-			if (!IsLocatedInList(g, similarGems) && !IsLocatedInList(g, similarGemsAdjacent) 
-			     && !IsLocatedInList(g, totalAdjacentGems) && !IsLocatedInList(g, tempGemsList)) {
-				print("enter");
-				tempGemsList.Add(g);
-				totalAdjacentGems.Add(g);
-				CheckForMoreAdjacentGems(g, tempGemsList);
+	private bool AreAllChecked(Gem gemToCheck, List<Gem> queueList) {
+		int count = 0;
+		if (IsLocatedInList(gemToCheck, queueList)) count++;
+		
+		foreach (var gemInQueue in queueList) {
+			foreach (var adjacentGem in gemToCheck.AdjacentGems) {
+				if (!adjacentGem) continue;
+				if (gemInQueue == adjacentGem) count++;
 			}
 		}
-	}*/
+
+		return count >= 6;
+	}
 
 	private IEnumerator DestroyFloatingGemsDelay() {
 		yield return new WaitForSeconds(1f);
