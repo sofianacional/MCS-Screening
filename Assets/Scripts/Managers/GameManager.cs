@@ -197,15 +197,15 @@ public class GameManager : MonoBehaviour {
 	private void FindFloatingGems() {
 		// get every attached gems
 		foreach (var adjacentGem in similarGemsAdjacent) { // Main checker for each similar gem adjacent
-			List<Gem> tempGemsList = new List<Gem>(); // temp list = list of gems that are adjacent to each other, until on ceiling/nothing 
-			tempGemsList.Add(adjacentGem);
+			List<Gem> tempList = new List<Gem>(); // temp list = list of gems that are adjacent to each other, until on ceiling/nothing 
+			tempList.Add(adjacentGem);
 			print("check new SGA");
 			
-			if (IsFloating(tempGemsList)) {
+			if (IsFloating(tempList)) {
 				print("is floating");
-				if (tempGemsList.Count <= 0) return;
+				if (tempList.Count <= 0) return;
 				
-				foreach (var g in tempGemsList) {
+				foreach (var g in tempList) {
 					if (!floatingGems.Contains(g)) floatingGems.Add(g);
 				}
 			}
@@ -213,26 +213,29 @@ public class GameManager : MonoBehaviour {
 		totalAdjacentGems.Clear();
 	}
 
-	private bool IsFloating(List<Gem> tempList) { // Returns if on ceiling/floating
+	private bool IsFloating(List<Gem> checkedGemsList) { // Returns if on ceiling/floating
 		List<Gem> queueList = new List<Gem>(); // adds "unchecked" gems to the queue list first
 		int queueIndex = 0;
 		
-		Gem gemToCheck = tempList[0];
+		Gem gemToCheck = checkedGemsList[0];
 		queueList.Add(gemToCheck);
 
-		while(!gemToCheck.IsOnCeiling || !AreAllChecked(gemToCheck, queueList)){ // Loop until gem to check is attached to ceiling / all gems have been checked but none are on ceiling
+		while(!gemToCheck.IsOnCeiling){ // Loop until gem to check is attached to ceiling / all gems have been checked but none are on ceiling
 			print("Gem to check: " + gemToCheck.GemID);
 			int emptyCounter = 0;
 			var checkedGemCounter = 0;
 			
-			foreach (var adjacentGem in gemToCheck.AdjacentGems) { // run through all current gem adjacent gem
-				if ( adjacentGem && IsLocatedInList(adjacentGem, tempList) && !IsLocatedInList(adjacentGem, queueList)) { // already in temp list, already checked
+			foreach (var adjacentGem in gemToCheck.AdjacentGems) { // CHECKS ALL ADJACENT GEM OF CURRENT GEM; run through all current gem adjacent gem
+				if (adjacentGem && adjacentGem.IsOnCeiling) { // adjacent gem is on ceiling so everything attached to gemToCheck is not floating
+					return false;
+				}
+				if ( adjacentGem && IsLocatedInList(adjacentGem, checkedGemsList) && !IsLocatedInList(adjacentGem, queueList)) { // already in temp list, already checked
 					checkedGemCounter++;
 					print("already in list");
 					if (checkedGemCounter >= 6) 
 						return false;
 				}
-				else if (!adjacentGem || IsLocatedInList(adjacentGem, similarGems) || IsLocatedInList(adjacentGem, similarGemsAdjacent) ) { // no adjacent gem OR not in similar gem
+				else if (!adjacentGem || IsLocatedInList(adjacentGem, similarGems)) { // no adjacent gem OR not in similar gem
 					print("empty");
 					emptyCounter++;
 					if (emptyCounter >= 6) { // floating, no adjacent gem
@@ -240,18 +243,22 @@ public class GameManager : MonoBehaviour {
 						return true; 
 					}
 				}
-				else if (adjacentGem && !IsLocatedInList(adjacentGem, tempList) && !IsLocatedInList(adjacentGem, queueList)) { // has adjacent, hasn't been checked
+				/*else if (adjacentGem && IsLocatedInList(adjacentGem, similarGemsAdjacent) && !IsLocatedInList(adjacentGem, checkedGemsList)) { 
+					
+				}*/
+				else if (adjacentGem && !IsLocatedInList(adjacentGem, checkedGemsList) && !IsLocatedInList(adjacentGem, queueList)) { // has adjacent, hasn't been checked
 					print( adjacentGem.GemID + " = has adjacent, put gem to queue");
 					queueList.Add(adjacentGem);
 				}
 				
-				if(!tempList.Contains(gemToCheck)) tempList.Add(gemToCheck);
+				if(!checkedGemsList.Contains(gemToCheck)) checkedGemsList.Add(gemToCheck); // have been checked and 
 				if(!totalAdjacentGems.Contains(gemToCheck)) totalAdjacentGems.Add(gemToCheck);
 			}
 
 			if (AreAllChecked(gemToCheck, queueList)) {
 				print("all gems are checked");
-				return false;
+				//return false;
+				return true;
 			}
 			
 			print(gemToCheck.GemID + " ?? " + queueList[queueIndex].GemID);
@@ -259,16 +266,17 @@ public class GameManager : MonoBehaviour {
 			// change gem to check
 			if (gemToCheck == queueList[queueIndex]) {
 				queueIndex++;
-				print("queue index: " + queueIndex);
-				print("queue list count: " + queueList.Count);
+				print("queue index: " + queueIndex + "; queue list count: " + queueList.Count);
 				if (queueIndex >= queueList.Count) {
 					// no more next element
 					print("no more next element");
-					break;
+					//break;
+					return true;
 				}
 				else {
-					print("next element");
 					gemToCheck = queueList[queueIndex];
+					print("next element = " + gemToCheck);
+					if(gemToCheck.IsOnCeiling) break;
 				}
 			}
 			else {
@@ -276,6 +284,7 @@ public class GameManager : MonoBehaviour {
 				break;
 			}
 		}
+		
 		print("on ceiling or idk,");
 		return false;
 	}
@@ -290,14 +299,15 @@ public class GameManager : MonoBehaviour {
 				if (gemInQueue == adjacentGem) count++;
 			}
 		}
-
-		return count >= 6;
+		print("Checked in gem = " + count);
+		return count >= 7; // true if checked is >= 7, including self
 	}
 
 	private IEnumerator DestroyFloatingGemsDelay() {
 		yield return new WaitForSeconds(1f);
 		foreach (var f in floatingGems) {
 			DestroyGem(f);
+			//f.GetComponent<SpriteRenderer>().enabled = false; // TEMPORARY
 			Destroy(f.gameObject);
 		}
 		yield return new WaitForSeconds(0.1f);
