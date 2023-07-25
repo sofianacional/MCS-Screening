@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Rendering;
 using UnityEngine.Tilemaps;
 using Random = UnityEngine.Random;
@@ -10,17 +11,25 @@ using Random = UnityEngine.Random;
 public class GameManager : MonoBehaviour {
 
 	private Player player;
-	
 	private Gem nextGem;
+	private ScoreSystem scoreSystem;
+	
+	[Header("Pre-Spawn Gems Data")]
 	[SerializeField] private GameObject gemGroup;
 	[SerializeField] private Gem gemPrefab; //Gem Prefabs - pero one muna for now for testing
+	
 	[SerializeField] private GemData[] gemDataList;
-	[SerializeField] private Transform gemSpawnPoint;
+	[SerializeField] private List<GemData> availableGemTypes = new();
 
+	[SerializeField] private Transform gemSpawnPoint;
+	
+	[Space]
 	[SerializeField] private Gem[] sampleLevelGems;
 	
-	[SerializeField] private int counter;
-	
+	[Header("Post-Spawn Gems Data")]
+	[SerializeField] private int similarGemsCounter;
+
+	[SerializeField] private List<Gem> spawnedGems = new();
 	[SerializeField] private List<Gem> similarGems = new();
 	[SerializeField] private List<Gem> similarGemsAdjacent = new();
 	[SerializeField] private List<Gem> totalAdjacentGems = new();
@@ -28,33 +37,66 @@ public class GameManager : MonoBehaviour {
 	[SerializeField] private List<Gem> floatingGems = new();
 
 	private Coroutine currentDestroyCoroutine;
+	private Coroutine loweringCeilingCoroutine;
 	
+	[Header("Environment")]
 	[SerializeField] private Ceiling ceiling;
+	[SerializeField] private Bounds bounds;
 
+	[Space]
+	[SerializeField] private float loweringInterval;
+	
+	
+	public UnityEvent<int> Evt_PlayerWin = new();
+	public UnityEvent<int> Evt_GameOver = new();
+	
 	private int tempCount;
 	
+	private void Awake() {
+		SingletonManager.Register(this);
+	}
+
 	private void Start() {
 		player = SingletonManager.Get<Player>();
 		player.Evt_OnShoot.AddListener(SpawnGem);
 
+		scoreSystem = GetComponent<ScoreSystem>();
+		scoreSystem.Evt_AddPoints.AddListener(player.OnGemDestroy);
+		
 		SetLevelGemData();
 		
 		// Initiate Game
 		SpawnGem();
+		loweringCeilingCoroutine = StartCoroutine(LowerCeilingInterval());
 	}
 
 	private void SpawnGem() {
 		do {
 			if(nextGem) player.SetNewGem(nextGem);
-
-			int randIndex = Random.Range(0, gemDataList.Length);
+			
+			availableGemTypes = GetAvailableGemTypes();
+			int randIndex = Random.Range(0, availableGemTypes.Count);
+			
 			Gem newGem = Instantiate(gemPrefab, gemSpawnPoint.position, Quaternion.identity);
-			newGem.Initialize(gemDataList[randIndex]);
-			newGem.transform.SetParent(gemGroup.transform);
+			newGem.Initialize(availableGemTypes[randIndex]);
+			
+			//newGem.transform.SetParent(gemGroup.transform);
 			newGem.Evt_OnHitOtherGem.AddListener(AttachGemToGem);
 			newGem.Evt_OnHitCeiling.AddListener(AttachGemToCeiling);
 			nextGem = newGem;
+			
 		} while (!player.CurrentGem);
+	}
+
+	private List<GemData> GetAvailableGemTypes() {
+		List<GemData> availableGemTypes = new();
+		
+		foreach (var gem in spawnedGems) {
+			if (!availableGemTypes.Contains(gem.Data)) {
+				availableGemTypes.Add(gem.Data);
+			}
+		}
+		return availableGemTypes;
 	}
 
 	#region Initialize Sample Level
@@ -66,7 +108,17 @@ public class GameManager : MonoBehaviour {
 			g.EnableComponents();
 			g.DisableMovement();
 			g.UpdateAdjacentGemsList();
+			
+			spawnedGems.Add(g);
 		}
+	}
+
+	#endregion
+
+	#region Game Loop
+
+	private void GameOver() {
+		
 	}
 
 	#endregion
@@ -83,16 +135,14 @@ public class GameManager : MonoBehaviour {
 			if (g.AttachedGem == invoker) {
 				if (g.CanAttach) {
 					invoker.transform.position = g.Origin.position;
-					//CheckAdjacentGemTypes(invoker);
-					//break;
 				}
 				else {
-					print("find nearest attach point");
 					invoker.transform.position = FindNearestAvailableAttachPoint(invoker, collidedGem);
 				}
 			}
 		}
 		CheckAdjacentGemTypes(invoker);
+		spawnedGems.Add(invoker);
 	}
 
 	private Vector2 FindNearestAvailableAttachPoint(Gem invoker, Gem collidedGem) {
@@ -114,30 +164,33 @@ public class GameManager : MonoBehaviour {
 	private void AttachGemToCeiling(Gem gemToAttach) {
 		gemToAttach.transform.position = ceiling.GetNearestPoint(gemToAttach.transform.position);
 		gemToAttach.transform.SetParent(gemGroup.transform);
+		
+		spawnedGems.Add(gemToAttach);
 	}
 
 	private void CheckAdjacentGemTypes(Gem invoker) {
 		similarGems.Clear();
 		similarGemsAdjacent.Clear();
-		counter = 1;
+		similarGemsCounter = 1;
 		
 		print("TYPE " + invoker.GemType);
 		similarGems.Add(invoker);
 
 		CountSimilarGemTypes(invoker);
-		print("TOTAL COUNT = " + counter);
+		print("TOTAL COUNT = " + similarGemsCounter);
 		
-		if (counter >= 3) {
+		if (similarGemsCounter >= 3) {
 			// DestroySimilarGems();
 			currentDestroyCoroutine = StartCoroutine(DestroySimilarGemsDelay());
 		}
+		else if(bounds.OnHitBounds) Evt_GameOver.Invoke(player.TotalScore);
 	}
 	
 	private void CountSimilarGemTypes(Gem gem) {
 		foreach (var a in gem.Sides) {
 			if (!IsLocatedInList(a.AttachedGem, similarGems) && a.AttachedGem && gem.GemType == a.AttachedGem.GemType) {
 				// SIMILAR GEM, unchecked gem, can add
-				counter++;
+				similarGemsCounter++;
 				similarGems.Add(a.AttachedGem);
 				CountSimilarGemTypes(a.AttachedGem);
 			}
@@ -152,8 +205,8 @@ public class GameManager : MonoBehaviour {
 	}
 
 	private void DestroyGem(Gem gemToDestroy) {
-		//print("invoke evt");
 		gemToDestroy.Evt_OnGemDestroyed.Invoke();
+		spawnedGems.Remove(gemToDestroy);
 		//Destroy(gemToDestroy.gameObject);
 	}
 
@@ -176,7 +229,6 @@ public class GameManager : MonoBehaviour {
 		
 		// IF LIST CONTAINS AT LEAST ONE ELEMENT
 		if (similarGemsAdjacent.Count > 0) { 
-			//print("find floating gem");
 			FindFloatingGems();
 		}
 		
@@ -186,10 +238,17 @@ public class GameManager : MonoBehaviour {
 			DestroyGem(g);
 			Destroy(g.gameObject);
 		}
+		scoreSystem.ComputeSimilarGemsScore(similarGemsCounter);
 		
 		yield return new WaitForSeconds(0.1f);
 		
 		if(floatingGems.Count > 0) currentDestroyCoroutine = StartCoroutine(DestroyFloatingGemsDelay());
+		
+		if (spawnedGems.Count <= 0) {
+			// YOU WIN !
+			Evt_PlayerWin.Invoke(player.TotalScore);
+		}
+		if(bounds.OnHitBounds) Evt_GameOver.Invoke(player.TotalScore);
 	}
 	
 	// FLOATING GEMS ** need recursion function that repeatedly calls itself to look for more floating gems
@@ -199,10 +258,10 @@ public class GameManager : MonoBehaviour {
 		foreach (var adjacentGem in similarGemsAdjacent) { // Main checker for each similar gem adjacent
 			List<Gem> tempList = new List<Gem>(); // temp list = list of gems that are adjacent to each other, until on ceiling/nothing 
 			tempList.Add(adjacentGem);
-			print("check new SGA");
+			//print("check new SGA");
 			
 			if (IsFloating(tempList)) {
-				print("is floating");
+				//print("is floating");
 				if (tempList.Count <= 0) return;
 				
 				foreach (var g in tempList) {
@@ -221,7 +280,7 @@ public class GameManager : MonoBehaviour {
 		queueList.Add(gemToCheck);
 
 		while(!gemToCheck.IsOnCeiling){ // Loop until gem to check is attached to ceiling / all gems have been checked but none are on ceiling
-			print("Gem to check: " + gemToCheck.GemID);
+			//print("Gem to check: " + gemToCheck.GemID);
 			int emptyCounter = 0;
 			var checkedGemCounter = 0;
 			
@@ -231,15 +290,15 @@ public class GameManager : MonoBehaviour {
 				}
 				if ( adjacentGem && IsLocatedInList(adjacentGem, checkedGemsList) && !IsLocatedInList(adjacentGem, queueList)) { // already in temp list, already checked
 					checkedGemCounter++;
-					print("already in list");
+					//print("already in list");
 					if (checkedGemCounter >= 6) 
 						return false;
 				}
 				else if (!adjacentGem || IsLocatedInList(adjacentGem, similarGems)) { // no adjacent gem OR not in similar gem
-					print("empty");
+					//print("empty");
 					emptyCounter++;
 					if (emptyCounter >= 6) { // floating, no adjacent gem
-						print("floating, return");
+						//print("floating, return");
 						return true; 
 					}
 				}
@@ -247,7 +306,7 @@ public class GameManager : MonoBehaviour {
 					
 				}*/
 				else if (adjacentGem && !IsLocatedInList(adjacentGem, checkedGemsList) && !IsLocatedInList(adjacentGem, queueList)) { // has adjacent, hasn't been checked
-					print( adjacentGem.GemID + " = has adjacent, put gem to queue");
+					//print( adjacentGem.GemID + " = has adjacent, put gem to queue");
 					queueList.Add(adjacentGem);
 				}
 				
@@ -256,36 +315,35 @@ public class GameManager : MonoBehaviour {
 			}
 
 			if (AreAllChecked(gemToCheck, queueList)) {
-				print("all gems are checked");
+				//print("all gems are checked");
 				//return false;
 				return true;
 			}
 			
-			print(gemToCheck.GemID + " ?? " + queueList[queueIndex].GemID);
+			//print(gemToCheck.GemID + " ?? " + queueList[queueIndex].GemID);
 			
 			// change gem to check
 			if (gemToCheck == queueList[queueIndex]) {
 				queueIndex++;
-				print("queue index: " + queueIndex + "; queue list count: " + queueList.Count);
+				//print("queue index: " + queueIndex + "; queue list count: " + queueList.Count);
 				if (queueIndex >= queueList.Count) {
 					// no more next element
-					print("no more next element");
+					//print("no more next element");
 					//break;
 					return true;
 				}
 				else {
 					gemToCheck = queueList[queueIndex];
-					print("next element = " + gemToCheck);
+					//print("next element = " + gemToCheck);
 					if(gemToCheck.IsOnCeiling) break;
 				}
 			}
 			else {
-				print("ure not supposed to enter here but im here to prevent the infinite loop");
+				//print("ure not supposed to enter here but im here to prevent the infinite loop");
 				break;
 			}
 		}
-		
-		print("on ceiling or idk,");
+		//print("on ceiling or idk,");
 		return false;
 	}
 
@@ -299,7 +357,6 @@ public class GameManager : MonoBehaviour {
 				if (gemInQueue == adjacentGem) count++;
 			}
 		}
-		print("Checked in gem = " + count);
 		return count >= 7; // true if checked is >= 7, including self
 	}
 
@@ -307,12 +364,31 @@ public class GameManager : MonoBehaviour {
 		yield return new WaitForSeconds(1f);
 		foreach (var f in floatingGems) {
 			DestroyGem(f);
-			//f.GetComponent<SpriteRenderer>().enabled = false; // TEMPORARY
 			Destroy(f.gameObject);
 		}
+		scoreSystem.ComputeFloatingGemsScore(floatingGems.Count);
+		
 		yield return new WaitForSeconds(0.1f);
+		
 		floatingGems.Clear();
 	}
 	
 	#endregion
+
+	#region Lowering of Ceiling
+	
+	private IEnumerator LowerCeilingInterval() {
+		var ceilingTransform = ceiling.transform;
+		var gemGroupTransform = gemGroup.transform;
+		
+		while (ceilingTransform.position.y > -6f && !bounds.OnHitBounds) {
+			yield return new WaitForSeconds(loweringInterval);
+			
+			ceilingTransform.Translate(0f, -1f, 0f);
+			gemGroupTransform.Translate(0f, -1f, 0f);
+		}
+	}
+
+	#endregion
+	
 }

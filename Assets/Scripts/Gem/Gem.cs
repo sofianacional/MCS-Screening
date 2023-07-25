@@ -20,12 +20,13 @@ public class Gem : MonoBehaviour {
 	[SerializeField] private GemMovement gemMovement;
 	[SerializeField] private CircleCollider2D gemCollider;
 	[SerializeField] private SpriteRenderer spriteRenderer;
-	
-	
+
+	public GemData Data;
 	public GemType GemType;
 	public List<Side> Sides;
 	public List<Gem> AdjacentGems;
-	
+
+	public bool IsAttached = false;
 	public bool IsOnCeiling;
 	
 	public UnityEvent<Gem> Evt_OnHitCeiling = new();
@@ -42,6 +43,7 @@ public class Gem : MonoBehaviour {
 	
 	public void Initialize(GemData gemData) {
 		// Set Gem Data
+		Data = gemData;
 		GemType = gemData.GemType;
 		spriteRenderer.sprite = gemData.GemSprite;
 		
@@ -68,7 +70,8 @@ public class Gem : MonoBehaviour {
 		transform.parent = null;
 	}
 
-	public void DisableMovement(){
+	public void DisableMovement() {
+		IsAttached = true;
 		gemMovement.DisableMovement();
 	}
 

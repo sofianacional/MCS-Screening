@@ -57,6 +57,7 @@ public class GemMovement : MonoBehaviour {
 		}
 		
 		if(col.gameObject.GetComponent<Gem>()){
+			gem.UpdateAdjacentGemsList();
 			gem.Evt_OnHitOtherGem.Invoke(gem, col.gameObject.GetComponent<Gem>());
 			DisableMovement();
 		}

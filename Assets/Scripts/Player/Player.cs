@@ -7,9 +7,11 @@ using UnityEngine.Events;
 public class Player : MonoBehaviour {
 	
 	[SerializeField] private PlayerShoot playerShoot;
+	
+	// PLAYER DATA
+	public int TotalScore { get; set; }
 
 	public Gem CurrentGem; // to shoot
-	
 	
 	public UnityEvent Evt_OnShoot = new();
 	
@@ -18,11 +20,11 @@ public class Player : MonoBehaviour {
 		playerShoot = GetComponent<PlayerShoot>();
 	}
 
-	private void Start() {
-		
-	}
-
 	public void SetNewGem(Gem newGem) {
 		playerShoot.SetNewGem(newGem);
+	}
+
+	public void OnGemDestroy(int points) {
+		TotalScore += points;
 	}
 }
