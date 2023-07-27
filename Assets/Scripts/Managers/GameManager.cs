@@ -1,11 +1,8 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Rendering;
-using UnityEngine.Tilemaps;
+using UnityEngine.SceneManagement;
 using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour {
@@ -46,31 +43,39 @@ public class GameManager : MonoBehaviour {
 	[Space]
 	[SerializeField] private float loweringInterval;
 	
-	
 	public UnityEvent<int> Evt_PlayerWin = new();
 	public UnityEvent<int> Evt_GameOver = new();
+	public UnityEvent Evt_ExitGame = new();
 	
 	private int tempCount;
 	
 	private void Awake() {
 		SingletonManager.Register(this);
 	}
-
-	private void Start() {
+	
+	private IEnumerator Start() {
 		player = SingletonManager.Get<Player>();
 		player.Evt_OnShoot.AddListener(SpawnGem);
 
 		scoreSystem = GetComponent<ScoreSystem>();
 		scoreSystem.Evt_AddPoints.AddListener(player.OnGemDestroy);
-		
+
 		SetLevelGemData();
+
+		yield return new WaitForSeconds(.1f);
 		
 		// Initiate Game
 		SpawnGem();
 		loweringCeilingCoroutine = StartCoroutine(LowerCeilingInterval());
 	}
 
+	private void RemoveSingleton() {
+		SingletonManager.Remove<GameManager>();
+	}
+
 	private void SpawnGem() {
+		if(spawnedGems.Count <= 0) return;
+		
 		do {
 			if(nextGem) player.SetNewGem(nextGem);
 			
@@ -83,6 +88,7 @@ public class GameManager : MonoBehaviour {
 			//newGem.transform.SetParent(gemGroup.transform);
 			newGem.Evt_OnHitOtherGem.AddListener(AttachGemToGem);
 			newGem.Evt_OnHitCeiling.AddListener(AttachGemToCeiling);
+			newGem.Evt_OnHitBounds.AddListener(GameOver);
 			nextGem = newGem;
 			
 		} while (!player.CurrentGem);
@@ -115,19 +121,42 @@ public class GameManager : MonoBehaviour {
 
 	#endregion
 
-	#region Game Loop
+	#region Game Conditions
 
 	private void GameOver() {
+		Evt_GameOver.Invoke(player.TotalScore);
+		player.DisableShoot();
+		PauseGame();
+	}
+
+	private void WinGame() {
+		Evt_PlayerWin.Invoke(player.TotalScore);
+		player.DisableShoot();
+		PauseGame();
+	}
+
+	public void PauseGame() {
+		player.DisableShoot();
+		Time.timeScale = 0;
+	}
+
+	public void ResumeGame() {
+		player.EnableShoot();
+		Time.timeScale = 1;
+	}
+
+	public void ExitGame() {
+		RemoveSingleton();
+		player.RemoveSingleton();
+		scoreSystem.RemoveSingleton();
 		
+		SceneManager.LoadScene("MainMenu");
 	}
 
 	#endregion
 	
 	#region Gem Attachment
 	
-	// Gem attachment is handled by GM because there are multiple possible areas that a gem can attach to
-	// Namely, to ANOTHER GEM or to the CEILING 
-
 	private void AttachGemToGem(Gem invoker, Gem collidedGem) {
 		invoker.transform.SetParent(gemGroup.transform);
 
@@ -179,11 +208,8 @@ public class GameManager : MonoBehaviour {
 		CountSimilarGemTypes(invoker);
 		print("TOTAL COUNT = " + similarGemsCounter);
 		
-		if (similarGemsCounter >= 3) {
-			// DestroySimilarGems();
-			currentDestroyCoroutine = StartCoroutine(DestroySimilarGemsDelay());
-		}
-		else if(bounds.OnHitBounds) Evt_GameOver.Invoke(player.TotalScore);
+		if (similarGemsCounter >= 3) currentDestroyCoroutine = StartCoroutine(DestroySimilarGemsDelay());
+		else if (bounds.OnHitBounds) GameOver();
 	}
 	
 	private void CountSimilarGemTypes(Gem gem) {
@@ -207,7 +233,6 @@ public class GameManager : MonoBehaviour {
 	private void DestroyGem(Gem gemToDestroy) {
 		gemToDestroy.Evt_OnGemDestroyed.Invoke();
 		spawnedGems.Remove(gemToDestroy);
-		//Destroy(gemToDestroy.gameObject);
 	}
 
 	private void CollateGemAdjacentGems() {
@@ -244,11 +269,8 @@ public class GameManager : MonoBehaviour {
 		
 		if(floatingGems.Count > 0) currentDestroyCoroutine = StartCoroutine(DestroyFloatingGemsDelay());
 		
-		if (spawnedGems.Count <= 0) {
-			// YOU WIN !
-			Evt_PlayerWin.Invoke(player.TotalScore);
-		}
-		if(bounds.OnHitBounds) Evt_GameOver.Invoke(player.TotalScore);
+		if (spawnedGems.Count <= 0) WinGame();
+		if (bounds.OnHitBounds) GameOver();
 	}
 	
 	// FLOATING GEMS ** need recursion function that repeatedly calls itself to look for more floating gems
@@ -258,10 +280,8 @@ public class GameManager : MonoBehaviour {
 		foreach (var adjacentGem in similarGemsAdjacent) { // Main checker for each similar gem adjacent
 			List<Gem> tempList = new List<Gem>(); // temp list = list of gems that are adjacent to each other, until on ceiling/nothing 
 			tempList.Add(adjacentGem);
-			//print("check new SGA");
 			
 			if (IsFloating(tempList)) {
-				//print("is floating");
 				if (tempList.Count <= 0) return;
 				
 				foreach (var g in tempList) {
@@ -316,7 +336,6 @@ public class GameManager : MonoBehaviour {
 
 			if (AreAllChecked(gemToCheck, queueList)) {
 				//print("all gems are checked");
-				//return false;
 				return true;
 			}
 			
@@ -327,23 +346,20 @@ public class GameManager : MonoBehaviour {
 				queueIndex++;
 				//print("queue index: " + queueIndex + "; queue list count: " + queueList.Count);
 				if (queueIndex >= queueList.Count) {
-					// no more next element
 					//print("no more next element");
-					//break;
 					return true;
 				}
-				else {
-					gemToCheck = queueList[queueIndex];
-					//print("next element = " + gemToCheck);
-					if(gemToCheck.IsOnCeiling) break;
-				}
+				
+				gemToCheck = queueList[queueIndex];
+				//print("next element = " + gemToCheck);
+				if(gemToCheck.IsOnCeiling) break;
 			}
 			else {
-				//print("ure not supposed to enter here but im here to prevent the infinite loop");
+				//print("not supposed to enter here but im here to prevent the infinite loop");
 				break;
 			}
 		}
-		//print("on ceiling or idk,");
+		//print("on ceiling");
 		return false;
 	}
 
@@ -371,6 +387,8 @@ public class GameManager : MonoBehaviour {
 		yield return new WaitForSeconds(0.1f);
 		
 		floatingGems.Clear();
+		
+		if (spawnedGems.Count <= 0) WinGame();
 	}
 	
 	#endregion

@@ -1,7 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.Timeline;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -57,6 +53,10 @@ public class Side : MonoBehaviour {
             if (c.GetComponentInParent<TilemapCollider2D>()) {
                 if (c.gameObject.layer == 6) gem.IsOnCeiling = true;
                 CanAttach = false;
+            }
+
+            if (c.gameObject.layer == 11) { // on hit bounds
+                gem.Evt_OnHitBounds.Invoke();
             }
             
             /*if(c.transform.parent == gameObject.transform.parent || !CanAttach) continue;

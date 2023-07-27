@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -33,7 +31,7 @@ public class Gem : MonoBehaviour {
 	public UnityEvent<Gem, Gem> Evt_OnHitOtherGem = new();
 
 	public UnityEvent Evt_OnGemDestroyed = new();
-	public UnityEvent<Gem> Evt_OnBecomeFloatingGem = new();
+	public UnityEvent Evt_OnHitBounds = new();
 	
 	private void Awake() {
 		gemMovement = GetComponent<GemMovement>();

@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -19,12 +16,24 @@ public class Player : MonoBehaviour {
 		SingletonManager.Register(this);
 		playerShoot = GetComponent<PlayerShoot>();
 	}
-
+	
+	public void RemoveSingleton() {
+		SingletonManager.Remove<Player>();
+	}
+	
 	public void SetNewGem(Gem newGem) {
 		playerShoot.SetNewGem(newGem);
 	}
 
 	public void OnGemDestroy(int points) {
 		TotalScore += points;
+	}
+	
+	public void DisableShoot() {
+		playerShoot.DisableShoot();
+	}
+	
+	public void EnableShoot() {
+		playerShoot.EnableShoot();
 	}
 }

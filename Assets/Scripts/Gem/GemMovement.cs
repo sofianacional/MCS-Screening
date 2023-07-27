@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -29,6 +27,7 @@ public class GemMovement : MonoBehaviour {
 
 	public void Move() {
 		if(!CanMove) return;
+
 		transform.rotation = Quaternion.identity;
 		rb.velocity = MoveDirection * speed;
 	}
@@ -52,14 +51,14 @@ public class GemMovement : MonoBehaviour {
 				//print("hit ceiling");
 				gem.IsOnCeiling = true;
 				gem.Evt_OnHitCeiling.Invoke(gem);
-				DisableMovement();
+				gem.DisableMovement();
 			}
 		}
 		
 		if(col.gameObject.GetComponent<Gem>()){
 			gem.UpdateAdjacentGemsList();
 			gem.Evt_OnHitOtherGem.Invoke(gem, col.gameObject.GetComponent<Gem>());
-			DisableMovement();
+			gem.DisableMovement();
 		}
 		
 		

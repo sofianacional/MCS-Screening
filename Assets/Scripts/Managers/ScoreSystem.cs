@@ -1,11 +1,8 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
 public class ScoreSystem : MonoBehaviour {
-
+	
 	[SerializeField] private int pointsPerGem;
 	[SerializeField] private int floatingInitialValue;
 	
@@ -14,11 +11,16 @@ public class ScoreSystem : MonoBehaviour {
 	private int totalScore;
 	private int totalFloatingGemPoints;
 	private int totalGemsPopped;
-	
+
+	public UnityEvent<int> Evt_OnUpdateScore = new();
 	public UnityEvent<int> Evt_AddPoints = new();
 
 	private void Awake() {
 		SingletonManager.Register(this);
+	}
+	
+	public void RemoveSingleton() {
+		SingletonManager.Remove<ScoreSystem>();
 	}
 
 	public void ComputeSimilarGemsScore(int gems) {
@@ -38,7 +40,8 @@ public class ScoreSystem : MonoBehaviour {
 
 	private void AddToTotalScore(int value) {
 		totalScore += value;
-		Evt_AddPoints.Invoke(totalScore);
+		Evt_OnUpdateScore.Invoke(totalScore);
+		Evt_AddPoints.Invoke(value);
 	}
 
 	private void AddTotalGems(int value) {

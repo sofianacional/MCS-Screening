@@ -1,6 +1,4 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerShoot : MonoBehaviour {
@@ -13,23 +11,35 @@ public class PlayerShoot : MonoBehaviour {
 	[SerializeField] private bool canShoot;
 	[SerializeField] private float fireRate; // in seconds
 
+	private bool disableShoot;
+	private bool canAim;
 	private Vector3 aimDirection;
 	private float gunAngle;
 
-	private void Awake() {
-		player = SingletonManager.Get<Player>();
+	private void Start() {
+		player = GetComponent<Player>();
+		EnableShoot();
 	}
 
 	private void Update() {
+		if(disableShoot) return;
+		
+		Vector2 mousePos = Input.mousePosition;
+		if (mousePos.x >= Screen.width * 0.75) {
+			canAim = false;
+		}
+		else canAim = true;
+		
 		Aim();
-
-		if (Input.GetMouseButton(0)) {
+		
+		if (Input.GetMouseButton(0) && canAim) {
 			Shoot();
 		}
 		
 	}
 	
 	private void Aim() {
+		if(!canAim) return;
 		aimDirection = Input.mousePosition - Camera.main.WorldToScreenPoint(playerGun.transform.position);
 		gunAngle = -Mathf.Atan2(aimDirection.x, aimDirection.y) * Mathf.Rad2Deg;
 		
@@ -56,11 +66,23 @@ public class PlayerShoot : MonoBehaviour {
 	}
 	
 	public void SetNewGem(Gem newGem) {
+		if (newGem == null) return;
 		player.CurrentGem = newGem;
 		player.CurrentGem.transform.SetParent(playerGun.transform);
 		player.CurrentGem.transform.position = firePoint.position;
 
 		canShoot = true;
 	}
+
+	public void DisableShoot() {
+		disableShoot = true;
+		canAim = false;
+		canShoot = false;
+	}
 	
+	public void EnableShoot() {
+		disableShoot = false;
+		canAim = true;
+		canShoot = true;
+	}
 }
