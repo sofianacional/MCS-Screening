@@ -16,37 +16,32 @@ public class Side : MonoBehaviour {
     }
 
     public void OnTriggerEnter2D(Collider2D col) {
-        //if(AttachedGem || col.transform.parent == gameObject.transform.parent || !CanAttach) return;
         if(col.transform == gameObject.transform.parent || !CanAttach) return;
         if (col.GetComponent<Gem>()) {
             AttachedGem = col.GetComponent<Gem>();
             gem.UpdateAdjacentGemsList();
             
             AttachedGem.Evt_OnGemDestroyed.AddListener(ClearSideGem);
-            //print("Gem " + transform.parent.gameObject + " to " + AttachedGem.gameObject);
         }
     }
 
     public void OnTriggerExit2D(Collider2D col) {
         if (col.GetComponent<Gem>()) {
             if (AttachedGem == col.GetComponent<Gem>()) {
-                //print("object " + gem.GemID + " " + gameObject.name);
-                //print("trigger exit");
                 ClearSideGem();
             }
         }
     }
 
     private void ClearSideGem() {
-        //print(gameObject.name + "clear");
         if(AttachedGem) AttachedGem.Evt_OnGemDestroyed.RemoveListener(ClearSideGem);
         AttachedGem = null;
         gem.UpdateAdjacentGemsList();
     }
 
     public void GetNearbyObjects() {
+        //print("Gem " + gem.GemID + "; Attached Gem: " + AttachedGem);
         Vector2 pos = (Vector2)transform.position - boxCol.offset;
-        //Collider2D[] listOfColliders = Physics2D.OverlapCircleAll(pos, 0.05f);
         Collider2D[] listOfColliders = Physics2D.OverlapBoxAll(pos, boxCol.size,0f);
         
         foreach (var c in listOfColliders) {
