@@ -45,7 +45,6 @@ public class GameManager : MonoBehaviour {
 	
 	public UnityEvent<int> Evt_PlayerWin = new();
 	public UnityEvent<int> Evt_GameOver = new();
-	public UnityEvent Evt_ExitGame = new();
 	
 	private int tempCount;
 	
@@ -53,17 +52,16 @@ public class GameManager : MonoBehaviour {
 		SingletonManager.Register(this);
 	}
 	
-	private IEnumerator Start() {
+	private void Start() {
+		print("start");
 		player = SingletonManager.Get<Player>();
 		player.Evt_OnShoot.AddListener(SpawnGem);
 
 		scoreSystem = GetComponent<ScoreSystem>();
 		scoreSystem.Evt_AddPoints.AddListener(player.OnGemDestroy);
-
+		
 		SetLevelGemData();
 
-		yield return new WaitForSeconds(.1f);
-		
 		// Initiate Game
 		SpawnGem();
 		loweringCeilingCoroutine = StartCoroutine(LowerCeilingInterval());
@@ -85,7 +83,6 @@ public class GameManager : MonoBehaviour {
 			Gem newGem = Instantiate(gemPrefab, gemSpawnPoint.position, Quaternion.identity);
 			newGem.Initialize(availableGemTypes[randIndex]);
 			
-			//newGem.transform.SetParent(gemGroup.transform);
 			newGem.Evt_OnHitOtherGem.AddListener(AttachGemToGem);
 			newGem.Evt_OnHitCeiling.AddListener(AttachGemToCeiling);
 			newGem.Evt_OnHitBounds.AddListener(GameOver);
@@ -150,6 +147,9 @@ public class GameManager : MonoBehaviour {
 		player.RemoveSingleton();
 		scoreSystem.RemoveSingleton();
 		
+		StopCoroutine(currentDestroyCoroutine);
+		StopCoroutine(loweringCeilingCoroutine);
+		
 		SceneManager.LoadScene("MainMenu");
 	}
 
@@ -205,21 +205,31 @@ public class GameManager : MonoBehaviour {
 		print("TYPE " + invoker.GemType);
 		similarGems.Add(invoker);
 
-		CountSimilarGemTypes(invoker);
+		List<Gem> queueList = new List<Gem>();
+		queueList.Add(invoker);
+		CountSimilarGemTypes(invoker, queueList);
 		print("TOTAL COUNT = " + similarGemsCounter);
 		
 		if (similarGemsCounter >= 3) currentDestroyCoroutine = StartCoroutine(DestroySimilarGemsDelay());
 		else if (bounds.OnHitBounds) GameOver();
 	}
 	
-	private void CountSimilarGemTypes(Gem gem) {
-		foreach (var a in gem.Sides) {
-			if (!IsLocatedInList(a.AttachedGem, similarGems) && a.AttachedGem && gem.GemType == a.AttachedGem.GemType) {
-				// SIMILAR GEM, unchecked gem, can add
-				similarGemsCounter++;
-				similarGems.Add(a.AttachedGem);
-				CountSimilarGemTypes(a.AttachedGem);
+	private void CountSimilarGemTypes(Gem initialGem, List<Gem> queueList) {
+		Gem currentGem = initialGem;
+		currentGem.UpdateAdjacentGemsList();
+		
+		for (int i = 0; i < queueList.Count; i++) {
+			foreach (var a in currentGem.Sides) {
+				if (!IsLocatedInList(a.AttachedGem, similarGems) && a.AttachedGem && currentGem.GemType == a.AttachedGem.GemType) {
+					// SIMILAR GEM, unchecked gem, can add
+					similarGemsCounter++;
+					similarGems.Add(a.AttachedGem);
+					//CountSimilarGemTypes(a.AttachedGem, queueList);
+					
+					if(!IsLocatedInList(a.AttachedGem, queueList)) queueList.Add(a.AttachedGem); // add to queue if not yet checked
+				}
 			}
+			if (queueList.Count > i + 1) currentGem = queueList[i + 1];
 		}
 	}
 
@@ -273,7 +283,7 @@ public class GameManager : MonoBehaviour {
 		if (bounds.OnHitBounds) GameOver();
 	}
 	
-	// FLOATING GEMS ** need recursion function that repeatedly calls itself to look for more floating gems
+	// FLOATING GEMS
 	
 	private void FindFloatingGems() {
 		// get every attached gems
@@ -310,54 +320,37 @@ public class GameManager : MonoBehaviour {
 				}
 				if ( adjacentGem && IsLocatedInList(adjacentGem, checkedGemsList) && !IsLocatedInList(adjacentGem, queueList)) { // already in temp list, already checked
 					checkedGemCounter++;
-					//print("already in list");
 					if (checkedGemCounter >= 6) 
 						return false;
 				}
 				else if (!adjacentGem || IsLocatedInList(adjacentGem, similarGems)) { // no adjacent gem OR not in similar gem
-					//print("empty");
 					emptyCounter++;
 					if (emptyCounter >= 6) { // floating, no adjacent gem
 						//print("floating, return");
 						return true; 
 					}
 				}
-				/*else if (adjacentGem && IsLocatedInList(adjacentGem, similarGemsAdjacent) && !IsLocatedInList(adjacentGem, checkedGemsList)) { 
-					
-				}*/
 				else if (adjacentGem && !IsLocatedInList(adjacentGem, checkedGemsList) && !IsLocatedInList(adjacentGem, queueList)) { // has adjacent, hasn't been checked
 					//print( adjacentGem.GemID + " = has adjacent, put gem to queue");
 					queueList.Add(adjacentGem);
 				}
 				
-				if(!checkedGemsList.Contains(gemToCheck)) checkedGemsList.Add(gemToCheck); // have been checked and 
+				if(!checkedGemsList.Contains(gemToCheck)) checkedGemsList.Add(gemToCheck); // have been checked
 				if(!totalAdjacentGems.Contains(gemToCheck)) totalAdjacentGems.Add(gemToCheck);
 			}
 
-			if (AreAllChecked(gemToCheck, queueList)) {
-				//print("all gems are checked");
-				return true;
-			}
-			
-			//print(gemToCheck.GemID + " ?? " + queueList[queueIndex].GemID);
+			if (AreAllChecked(gemToCheck, queueList)) return true;
 			
 			// change gem to check
 			if (gemToCheck == queueList[queueIndex]) {
 				queueIndex++;
-				//print("queue index: " + queueIndex + "; queue list count: " + queueList.Count);
-				if (queueIndex >= queueList.Count) {
-					//print("no more next element");
-					return true;
-				}
+				
+				if (queueIndex >= queueList.Count) return true;
 				
 				gemToCheck = queueList[queueIndex];
-				//print("next element = " + gemToCheck);
 				if(gemToCheck.IsOnCeiling) break;
 			}
-			else {
-				//print("not supposed to enter here but im here to prevent the infinite loop");
-				break;
-			}
+			else break;
 		}
 		//print("on ceiling");
 		return false;
